@@ -1,16 +1,12 @@
 
 <h2 align="center">Hi there, I'm hyy321 👋</h2>
 
-<p align="center">
-  Interested in AI Agents and AI Systems.
-</p>
+<h3>👨‍💻 About Me</h3>
 
-<h3 align="center">📊 GitHub Statistics</h3>
+Interested in AI Agents and AI Systems.
 
-<p align="center">
-  <img src="https://github-stats-extended.vercel.app/api?username=hyy321&show_icons=true&theme=default&hide_border=true" alt="GitHub Stats" />
-</p>
+<h3>📊 GitHub Activity</h3>
 
 <p align="center">
-  <img src="https://github-stats-extended.vercel.app/api/top-langs/?username=hyy321&layout=compact&theme=default&hide_border=true" alt="Most Used Languages" />
+  <img src="https://streak-stats.demolab.com?user=hyy321&theme=default" alt="GitHub Streak" />
 </p>

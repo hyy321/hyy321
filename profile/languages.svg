@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="490" height="117" viewBox="0 0 490 117" role="img" aria-label="Most Used Languages">
+  <rect x="0.5" y="0.5" width="489" height="116" rx="6" fill="white" stroke="#e5e7eb"/>
+  <text x="18" y="32" fill="#4f86b1" font-size="19" font-weight="600" font-family="Arial,sans-serif">Most Used Languages</text>
+  <rect x="18" y="49" width="454" height="9" rx="4.5" fill="#e6edf3"/>
+  <defs><clipPath id="bar"><rect x="18" y="49" width="454" height="9" rx="4.5"/></clipPath></defs>
+  <g clip-path="url(#bar)"></g>
+  <text x="18" y="88" fill="#57606a" font-size="12">No public language data</text>
+</svg>

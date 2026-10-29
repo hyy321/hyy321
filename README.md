@@ -44,3 +44,7 @@ I'm a graduate student at **Nanjing University of Information Science and Techno
 <p align="center">
   <img src="./profile/streak.svg" alt="GitHub Streak" />
 </p>
+
+<p align="center">
+  <img src="./profile/languages.svg" alt="Most Used Languages" />
+</p>

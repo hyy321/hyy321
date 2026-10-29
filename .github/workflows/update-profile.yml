@@ -23,106 +23,119 @@ jobs:
           options: user=hyy321&theme=default&disable_animations=true
           path: profile/streak.svg
 
-      - name: Fix this-year total and write full README
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import datetime as dt
-          import json
-          import os
-          import re
-          import urllib.request
-          from pathlib import Path
+      - name: Update this-year total and generate language card
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('node:fs');
+            const year = new Date().getUTCFullYear();
+            const totals = new Map();
+            const colors = new Map();
+            let cursor = null;
+            let thisYear = null;
 
-          user = 'hyy321'
-          now = dt.datetime.now(dt.timezone.utc)
-          year = now.year
-          query = '''
-          query($login: String!, $from: DateTime!, $to: DateTime!) {
-            user(login: $login) {
-              contributionsCollection(from: $from, to: $to) {
-                contributionCalendar { totalContributions }
-              }
-            }
-          }
-          '''
-          variables = {
-              'login': user,
-              'from': f'{year}-01-01T00:00:00Z',
-              'to': now.strftime('%Y-%m-%dT%H:%M:%SZ'),
-          }
-          request = urllib.request.Request(
-              'https://api.github.com/graphql',
-              data=json.dumps({'query': query, 'variables': variables}).encode(),
-              headers={
-                  'Authorization': f'Bearer {os.environ["GH_TOKEN"]}',
-                  'Accept': 'application/vnd.github+json',
-                  'Content-Type': 'application/json',
-                  'User-Agent': 'github-profile-streak',
-              },
-          )
-          with urllib.request.urlopen(request, timeout=30) as response:
-              payload = json.load(response)
-          if payload.get('errors') or not payload.get('data', {}).get('user'):
-              raise RuntimeError(f'GitHub GraphQL error: {payload.get("errors", payload)}')
-          total = payload['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions']
-
-          svg_path = Path('profile/streak.svg')
-          svg = svg_path.read_text(encoding='utf-8')
-
-          def replace_panel(comment, value):
-              global svg
-              pattern = r'(<!--\s*' + re.escape(comment) + r'\s*-->[\s\S]*?<text\b[^>]*>)([\s\S]*?)(</text>)'
-              match = re.search(pattern, svg)
-              if match is None or len(re.findall(pattern, svg)) != 1:
-                  raise RuntimeError(f'Streak SVG layout changed: {comment}')
-              svg = svg[:match.start(2)] + '\n' + str(value) + '\n' + svg[match.end(2):]
-
-          # Only these TWO left-panel values are modified.
-          replace_panel('Total Contributions big number', f'{total:,}')
-          replace_panel('Total Contributions range', f'Jan 1, {year} - Present')
-          svg_path.write_text(svg, encoding='utf-8')
-
-          # Build a language card from publicly owned, non-fork repositories.
-          from collections import defaultdict
-          from xml.etree import ElementTree as ET
-
-          language_sizes = defaultdict(int)
-          language_colors = {}
-          cursor = None
-          language_query = """
-          query($login: String!, $cursor: String) {
-            user(login: $login) {
-              repositories(
-                first: 50, after: $cursor, isFork: false,
-                ownerAffiliations: OWNER, privacy: PUBLIC
-              ) {
-                pageInfo { hasNextPage endCursor }
-                nodes {
-                  languages(first: 20, orderBy: { field: SIZE, direction: DESC }) {
-                    edges { size node { name color } }
+            do {
+              const result = await github.graphql(`
+                query($login: String!, $from: DateTime!, $to: DateTime!, $after: String) {
+                  user(login: $login) {
+                    contributionsCollection(from: $from, to: $to) {
+                      contributionCalendar { totalContributions }
+                    }
+                    repositories(first: 100, after: $after, isFork: false,
+                                 privacy: PUBLIC, ownerAffiliations: OWNER) {
+                      pageInfo { hasNextPage endCursor }
+                      nodes {
+                        languages(first: 20, orderBy: {field: SIZE, direction: DESC}) {
+                          edges { size node { name color } }
+                        }
+                      }
+                    }
                   }
                 }
+              `, {
+                login: 'hyy321',
+                from: `${year}-01-01T00:00:00Z`,
+                to: new Date().toISOString(),
+                after: cursor,
+              });
+              if (!result.user) throw new Error('GitHub user not found');
+              thisYear = result.user.contributionsCollection.contributionCalendar.totalContributions;
+              for (const repo of result.user.repositories.nodes) {
+                for (const edge of repo.languages.edges) {
+                  const name = edge.node.name;
+                  totals.set(name, (totals.get(name) || 0) + edge.size);
+                  colors.set(name, edge.node.color || '#8b949e');
+                }
               }
+              const page = result.user.repositories.pageInfo;
+              cursor = page.hasNextPage ? page.endCursor : null;
+            } while (cursor);
+
+            // Patch ONLY the two text fields in the left streak panel.
+            const streakFile = 'profile/streak.svg';
+            let streak = fs.readFileSync(streakFile, 'utf8');
+            function patchLeft(comment, value) {
+              const regex = new RegExp(`(<!--\\s*${comment}\\s*-->[\\s\\S]*?<text\\b[^>]*>)[\\s\\S]*?(</text>)`);
+              if (!regex.test(streak)) throw new Error(`Streak SVG marker missing: ${comment}`);
+              streak = streak.replace(regex, (_match, before, after) => before + value + after);
             }
-          }
-          """
-          while True:
-              language_request = urllib.request.Request(
-                  'https://api.github.com/graphql',
-                  data=json.dumps({
-                      'query': language_query,
-                      'variables': {'login': user, 'cursor': cursor},
-                  }).encode(),
-                  headers={
-                      'Authorization': f'Bearer {os.environ["GH_TOKEN"]}',
-                      'Accept': 'application/vnd.github+json',
-                      'Content-Type': 'application/json',
-                      'User-Agent': 'github-profile-languages',
-                  },
-              )
-              with urllib.request.urlopen(language_request, timeout=30) as response:
-                  language_payload = json.load(response)
-              if language_payload.get('errors') or not language_payload.get('data', {}).get('user'):
+            patchLeft('Total Contributions big number', thisYear.toLocaleString('en-US'));
+            patchLeft('Total Contributions range', `Jan 1, ${year} - Present`);
+            fs.writeFileSync(streakFile, streak);
+
+            // Build the language card from owned public non-fork repositories.
+            const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+            const top = ranked.slice(0, 10);
+            const sum = ranked.reduce((n, [, bytes]) => n + bytes, 0);
+            const esc = text => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const rows = Math.max(1, Math.ceil(top.length / 2));
+            const height = 91 + rows * 26;
+            let x = 18;
+            const segments = ranked.map(([name, bytes]) => {
+              const width = sum ? 454 * bytes / sum : 0;
+              const rect = `<rect x="${x.toFixed(3)}" y="49" width="${width.toFixed(3)}" height="9" fill="${colors.get(name)}"/>`;
+              x += width;
+              return rect;
+            }).join('');
+            const legend = top.map(([name, bytes], i) => {
+              const col = Math.floor(i / rows);
+              const row = i % rows;
+              const lx = 20 + col * 235;
+              const ly = 88 + row * 26;
+              const percent = sum ? (100 * bytes / sum).toFixed(1) : '0.0';
+              return `<circle cx="${lx}" cy="${ly - 4}" r="4.5" fill="${colors.get(name)}"/>` +
+                     `<text x="${lx + 12}" y="${ly}" fill="#57606a" font-size="12" font-family="Arial,sans-serif">${esc(name)} ${percent}%</text>`;
+            }).join('');
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="490" height="${height}" viewBox="0 0 490 ${height}" role="img" aria-label="Most Used Languages">
+              <rect x="0.5" y="0.5" width="489" height="${height - 1}" rx="6" fill="white" stroke="#e5e7eb"/>
+              <text x="18" y="32" fill="#4f86b1" font-size="19" font-weight="600" font-family="Arial,sans-serif">Most Used Languages</text>
+              <rect x="18" y="49" width="454" height="9" rx="4.5" fill="#e6edf3"/>
+              <defs><clipPath id="bar"><rect x="18" y="49" width="454" height="9" rx="4.5"/></clipPath></defs>
+              <g clip-path="url(#bar)">${segments}</g>
+              ${legend || '<text x="18" y="88" fill="#57606a" font-size="12">No public language data</text>'}
+            </svg>`;
+            fs.mkdirSync('profile', {recursive: true});
+            fs.writeFileSync('profile/languages.svg', svg);
+
+            // Keep the existing README and append the image only once.
+            const readmeFile = 'README.md';
+            let readme = fs.readFileSync(readmeFile, 'utf8');
+            if (!readme.includes('profile/languages.svg')) {
+              readme = readme.trimEnd() + '\n\n<p align="center">\n' +
+                       '  <img src="./profile/languages.svg" alt="Most Used Languages" />\n' +
+                       '</p>\n';
+              fs.writeFileSync(readmeFile, readme);
+            }
+            core.info(`Updated ${year} total (${thisYear}) and ${top.length} languages.`);
+
+      - name: Commit updated profile images
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md profile/streak.svg profile/languages.svg
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: refresh GitHub profile statistics'
+            git push
+          fi

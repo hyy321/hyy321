@@ -1,4 +1,3 @@
-
 <h2 align="center">Hi there, I'm hyy321 👋</h2>
 
 ### 🎓 About Me
@@ -43,5 +42,5 @@ I'm a graduate student at **Nanjing University of Information Science and Techno
 ### 📊 GitHub Activity
 
 <p align="center">
-  <img src="https://streak-stats.demolab.com/?user=hyy321&theme=default&starting_year=2026&v=20261029" alt="GitHub Streak" />
+  <img src="./profile/streak.svg" alt="GitHub Streak" />
 </p>

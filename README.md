@@ -45,25 +45,23 @@ I'm a graduate student at **Nanjing University of Information Science and Techno
   <img src="./profile/streak.svg" alt="GitHub Streak" />
 </p>
 
+
 <p align="center">
-  <img src="./profile/languages.svg" alt="Most Used Languages" />
+  <picture>
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="https://raw.githubusercontent.com/hyy321/hyy321/output/github-snake-dark.svg"
+    />
+    <source
+      media="(prefers-color-scheme: light)"
+      srcset="https://raw.githubusercontent.com/hyy321/hyy321/output/github-snake.svg"
+    />
+    <img
+      alt="GitHub activity animation"
+      src="https://raw.githubusercontent.com/hyy321/hyy321/output/github-snake.svg"
+      width="100%"
+    />
+  </picture>
 </p>
 
-
-<h3 align="center">🐍 My Contribution Snake</h3>
-
-<picture>
-  <source
-    media="(prefers-color-scheme: dark)"
-    srcset="https://raw.githubusercontent.com/hyy321/hyy321/output/github-snake-dark.svg"
-  />
-  <source
-    media="(prefers-color-scheme: light)"
-    srcset="https://raw.githubusercontent.com/hyy321/hyy321/output/github-snake.svg"
-  />
-  <img
-    alt="GitHub Contribution Snake"
-    src="https://raw.githubusercontent.com/hyy321/hyy321/output/github-snake.svg"
-  />
-</picture>
 

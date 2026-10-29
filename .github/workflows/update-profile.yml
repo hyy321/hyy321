@@ -1,90 +1,91 @@
+raise RuntimeError(f'GitHub language query failed: {language_payload.get("errors", language_payload)}')
+              repos = language_payload['data']['user']['repositories']
+              for repo in repos.get('nodes', []):
+                  for edge in repo['languages']['edges']:
+                      name = edge['node']['name']
+                      language_sizes[name] += edge['size']
+                      language_colors[name] = edge['node'].get('color') or '#8b949e'
+              page_info = repos['pageInfo']
+              if not page_info['hasNextPage']:
+                  break
+              cursor = page_info['endCursor']
 
-name: Update GitHub Profile
+          ranked_languages = sorted(language_sizes.items(), key=lambda item: item[1], reverse=True)
+          top_languages = ranked_languages[:10]
+          total_language_bytes = sum(language_sizes.values())
 
-on:
-  push:
-    paths:
-      - '.github/workflows/update-profile.yml'
-  schedule:
-    - cron: '15 0 * * *'
-  workflow_dispatch:
+          # The markup is generated locally, so the README image does not depend
+          # on a rate-limited third-party statistics image endpoint.
+          SVG_NS = 'http://www.w3.org/2000/svg'
+          ET.register_namespace('', SVG_NS)
+          def element(parent, tag, attrs=None, value=None):
+              item = ET.SubElement(parent, f'{{{SVG_NS}}}{tag}', attrs or {})
+              if value is not None:
+                  item.text = str(value)
+              return item
 
-permissions:
-  contents: write
-
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate full-history streak card
-        uses: DenverCoder1/github-readme-streak-stats@v1
-        with:
-          options: user=hyy321&theme=default&disable_animations=true
-          path: profile/streak.svg
-
-      - name: Fix this-year total and write full README
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import datetime as dt
-          import json
-          import os
-          import re
-          import urllib.request
-          from pathlib import Path
-
-          user = 'hyy321'
-          now = dt.datetime.now(dt.timezone.utc)
-          year = now.year
-          query = '''
-          query($login: String!, $from: DateTime!, $to: DateTime!) {
-            user(login: $login) {
-              contributionsCollection(from: $from, to: $to) {
-                contributionCalendar { totalContributions }
-              }
-            }
-          }
-          '''
-          variables = {
-              'login': user,
-              'from': f'{year}-01-01T00:00:00Z',
-              'to': now.strftime('%Y-%m-%dT%H:%M:%SZ'),
-          }
-          request = urllib.request.Request(
-              'https://api.github.com/graphql',
-              data=json.dumps({'query': query, 'variables': variables}).encode(),
-              headers={
-                  'Authorization': f'Bearer {os.environ["GH_TOKEN"]}',
-                  'Accept': 'application/vnd.github+json',
-                  'Content-Type': 'application/json',
-                  'User-Agent': 'github-profile-streak',
-              },
-          )
-          with urllib.request.urlopen(request, timeout=30) as response:
-              payload = json.load(response)
-          if payload.get('errors') or not payload.get('data', {}).get('user'):
-              raise RuntimeError(f'GitHub GraphQL error: {payload.get("errors", payload)}')
-          total = payload['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions']
-
-          svg_path = Path('profile/streak.svg')
-          svg = svg_path.read_text(encoding='utf-8')
-
-          def replace_panel(comment, value):
-              global svg
-              pattern = r'(<!--\s*' + re.escape(comment) + r'\s*-->[\s\S]*?<text\b[^>]*>)([\s\S]*?)(</text>)'
-              match = re.search(pattern, svg)
-              if match is None or len(re.findall(pattern, svg)) != 1:
-                  raise RuntimeError(f'Streak SVG layout changed: {comment}')
-              svg = svg[:match.start(2)] + '\n' + str(value) + '\n' + svg[match.end(2):]
-
-          # Modify only the left panel
-          replace_panel('Total Contributions big number', f'{total:,}')
-          replace_panel('Total Contributions range', f'Jan 1, {year} - Present')
-          svg_path.write_text(svg, encoding='utf-8')
+          card_width = 490
+          rows = max(1, (len(top_languages) + 1) // 2)
+          card_height = 91 + 26 * rows
+          root = ET.Element(f'{{{SVG_NS}}}svg', {
+              'width': str(card_width), 'height': str(card_height),
+              'viewBox': f'0 0 {card_width} {card_height}',
+              'role': 'img', 'aria-label': 'Most Used Languages',
+          })
+          element(root, 'rect', {
+              'x': '0.5', 'y': '0.5', 'width': str(card_width-1),
+              'height': str(card_height-1), 'rx': '6',
+              'fill': '#ffffff', 'stroke': '#e5e7eb',
+          })
+          element(root, 'text', {
+              'x': '18', 'y': '32', 'fill': '#4f86b1',
+              'font-size': '19', 'font-weight': '600',
+              'font-family': 'Arial, Helvetica, sans-serif',
+          }, 'Most Used Languages')
+          element(root, 'rect', {
+              'x': '18', 'y': '49', 'width': str(card_width-36),
+              'height': '9', 'rx': '4.5', 'fill': '#e6edf3',
+          })
+          if total_language_bytes:
+              defs = element(root, 'defs')
+              clip = element(defs, 'clipPath', {'id': 'bar-clip'})
+              element(clip, 'rect', {
+                  'x': '18', 'y': '49', 'width': str(card_width-36),
+                  'height': '9', 'rx': '4.5',
+              })
+              segment_group = element(root, 'g', {'clip-path': 'url(#bar-clip)'})
+              x = 18.0
+              for name, byte_count in ranked_languages:
+                  segment_width = (card_width - 36) * byte_count / total_language_bytes
+                  element(segment_group, 'rect', {
+                      'x': f'{x:.3f}', 'y': '49',
+                      'width': f'{segment_width:.3f}', 'height': '9',
+                      'fill': language_colors[name],
+                  })
+                  x += segment_width
+          if not top_languages:
+              element(root, 'text', {
+                  'x': '18', 'y': '88', 'font-size': '13',
+                  'fill': '#57606a',
+              }, 'No public repository language data available.')
+          for index, (name, byte_count) in enumerate(top_languages):
+              column = index // rows
+              row = index % rows
+              x = 20 + column * 235
+              y = 88 + row * 26
+              percent = 100 * byte_count / total_language_bytes
+              element(root, 'circle', {
+                  'cx': str(x), 'cy': str(y-4), 'r': '4.5',
+                  'fill': language_colors[name],
+              })
+              element(root, 'text', {
+                  'x': str(x+12), 'y': str(y),
+                  'fill': '#57606a', 'font-size': '12',
+                  'font-family': 'Arial, Helvetica, sans-serif',
+              }, f'{name} {percent:.1f}%')
+          languages_path = Path('profile/languages.svg')
+          languages_path.parent.mkdir(parents=True, exist_ok=True)
+          languages_path.write_bytes(ET.tostring(root, encoding='utf-8', xml_declaration=True))
 
           readme = '''<h2 align="center">Hi there, I'm hyy321 👋</h2>
 
@@ -132,7 +133,12 @@ jobs:
           <p align="center">
             <img src="./profile/streak.svg" alt="GitHub Streak" />
           </p>
+
+          <p align="center">
+            <img src="./profile/languages.svg" alt="Most Used Languages" />
+          </p>
           '''
+          # Strip YAML block indentation from the markdown payload.
           import textwrap
           Path('README.md').write_text(textwrap.dedent(readme).strip() + '\n', encoding='utf-8')
           print(f'Generated README and streak card for {year}; left total: {total}')
@@ -143,7 +149,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add README.md profile/streak.svg
+          git add README.md profile/streak.svg profile/languages.svg
           if ! git diff --cached --quiet; then
             git commit -m 'chore: update GitHub profile statistics'
             git push

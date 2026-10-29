@@ -34,6 +34,8 @@ jobs:
             const colors = new Map();
             let cursor = null;
             let thisYear = null;
+            let reposChecked = 0;
+            let reposWithLanguages = 0;
 
             do {
               const result = await github.graphql(`
@@ -42,7 +44,7 @@ jobs:
                     contributionsCollection(from: $from, to: $to) {
                       contributionCalendar { totalContributions }
                     }
-                    repositories(first: 100, after: $after, isFork: false,
+                    repositories(first: 100, after: $after,
                                  privacy: PUBLIC, ownerAffiliations: OWNER) {
                       pageInfo { hasNextPage endCursor }
                       nodes {
@@ -62,6 +64,8 @@ jobs:
               if (!result.user) throw new Error('GitHub user not found');
               thisYear = result.user.contributionsCollection.contributionCalendar.totalContributions;
               for (const repo of result.user.repositories.nodes) {
+                reposChecked++;
+                if (repo.languages.edges.length) reposWithLanguages++;
                 for (const edge of repo.languages.edges) {
                   const name = edge.node.name;
                   totals.set(name, (totals.get(name) || 0) + edge.size);
@@ -84,7 +88,8 @@ jobs:
             patchLeft('Total Contributions range', `Jan 1, ${year} - Present`);
             fs.writeFileSync(streakFile, streak);
 
-            // Build the language card from owned public non-fork repositories.
+            // Include owned public forked repos as well. Their language sizes also
+            // include upstream code, not just changes authored by this user.
             const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
             const top = ranked.slice(0, 10);
             const sum = ranked.reduce((n, [, bytes]) => n + bytes, 0);
@@ -127,7 +132,7 @@ jobs:
                        '</p>\n';
               fs.writeFileSync(readmeFile, readme);
             }
-            core.info(`Updated ${year} total (${thisYear}) and ${top.length} languages.`);
+            core.info(`Updated ${year} total (${thisYear}); checked ${reposChecked} owned public repositories (${reposWithLanguages} with language data), displayed ${top.length} languages. Forked repositories are included.`);
 
       - name: Commit updated profile images
         shell: bash

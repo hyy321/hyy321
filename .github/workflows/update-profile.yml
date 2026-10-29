@@ -1,0 +1,150 @@
+
+name: Update GitHub Profile
+
+on:
+  push:
+    paths:
+      - '.github/workflows/update-profile.yml'
+  schedule:
+    - cron: '15 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate full-history streak card
+        uses: DenverCoder1/github-readme-streak-stats@v1
+        with:
+          options: user=hyy321&theme=default&disable_animations=true
+          path: profile/streak.svg
+
+      - name: Fix this-year total and write full README
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import re
+          import urllib.request
+          from pathlib import Path
+
+          user = 'hyy321'
+          now = dt.datetime.now(dt.timezone.utc)
+          year = now.year
+          query = '''
+          query($login: String!, $from: DateTime!, $to: DateTime!) {
+            user(login: $login) {
+              contributionsCollection(from: $from, to: $to) {
+                contributionCalendar { totalContributions }
+              }
+            }
+          }
+          '''
+          variables = {
+              'login': user,
+              'from': f'{year}-01-01T00:00:00Z',
+              'to': now.strftime('%Y-%m-%dT%H:%M:%SZ'),
+          }
+          request = urllib.request.Request(
+              'https://api.github.com/graphql',
+              data=json.dumps({'query': query, 'variables': variables}).encode(),
+              headers={
+                  'Authorization': f'Bearer {os.environ["GH_TOKEN"]}',
+                  'Accept': 'application/vnd.github+json',
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'github-profile-streak',
+              },
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              payload = json.load(response)
+          if payload.get('errors') or not payload.get('data', {}).get('user'):
+              raise RuntimeError(f'GitHub GraphQL error: {payload.get("errors", payload)}')
+          total = payload['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions']
+
+          svg_path = Path('profile/streak.svg')
+          svg = svg_path.read_text(encoding='utf-8')
+
+          def replace_panel(comment, value):
+              global svg
+              pattern = r'(<!--\s*' + re.escape(comment) + r'\s*-->[\s\S]*?<text\b[^>]*>)([\s\S]*?)(</text>)'
+              match = re.search(pattern, svg)
+              if match is None or len(re.findall(pattern, svg)) != 1:
+                  raise RuntimeError(f'Streak SVG layout changed: {comment}')
+              svg = svg[:match.start(2)] + '\n' + str(value) + '\n' + svg[match.end(2):]
+
+          # Modify only the left panel
+          replace_panel('Total Contributions big number', f'{total:,}')
+          replace_panel('Total Contributions range', f'Jan 1, {year} - Present')
+          svg_path.write_text(svg, encoding='utf-8')
+
+          readme = '''<h2 align="center">Hi there, I'm hyy321 👋</h2>
+
+          ### 🎓 About Me
+
+          I'm a graduate student at **Nanjing University of Information Science and Technology (NUIST)**, interested in **AI Agents, AI Systems, and AI Infrastructure**.
+
+          ### 🚀 Tech Stack
+
+          - 🔹 **Languages:**
+
+            ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+            ![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white)
+            ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+            ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
+            ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat&logo=openjdk&logoColor=white)
+
+          - 🔹 **AI & Agents:**
+
+            ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=flat)
+            ![LangGraph](https://img.shields.io/badge/LangGraph-2C3E50?style=flat)
+            ![MCP](https://img.shields.io/badge/MCP-654FF0?style=flat)
+            ![Agent Skills](https://img.shields.io/badge/Agent_Skills-00897B?style=flat)
+            ![Deep Research](https://img.shields.io/badge/Deep_Research-4169E1?style=flat)
+            ![Multi-Agent](https://img.shields.io/badge/Multi--Agent-6A5ACD?style=flat)
+            ![RAG](https://img.shields.io/badge/RAG-009688?style=flat)
+            ![ReAct](https://img.shields.io/badge/ReAct-E67E22?style=flat)
+
+          - 🔹 **Database:**
+
+            ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
+            ![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white)
+            ![ChromaDB](https://img.shields.io/badge/ChromaDB-7952B3?style=flat)
+
+          - 🔹 **Development Tools:**
+
+            ![Git](https://img.shields.io/badge/Git-F05032?style=flat&logo=git&logoColor=white)
+            ![VS Code](https://img.shields.io/badge/VS_Code-007ACC?style=flat)
+            ![Codex](https://img.shields.io/badge/Codex-000000?style=flat&logo=openai&logoColor=white)
+            ![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=flat&logo=kubernetes&logoColor=white)
+            ![Typora](https://img.shields.io/badge/Typora-525252?style=flat&logo=typora&logoColor=white)
+
+          ### 📊 GitHub Activity
+
+          <p align="center">
+            <img src="./profile/streak.svg" alt="GitHub Streak" />
+          </p>
+          '''
+          import textwrap
+          Path('README.md').write_text(textwrap.dedent(readme).strip() + '\n', encoding='utf-8')
+          print(f'Generated README and streak card for {year}; left total: {total}')
+          PY
+
+      - name: Commit generated profile
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md profile/streak.svg
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: update GitHub profile statistics'
+            git push
+          fi

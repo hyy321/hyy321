@@ -1,28 +1,9 @@
+
 <h2 align="center">Hi there, I'm hyy321 👋</h2>
 
 <p align="center">
-  Interested in AI Infrastructure, AI Agents, and Cloud Native
+  Interested in AI Agents and AI Systems.
 </p>
-
-<h3>👨‍💻 About Me</h3>
-
-- 🔭 Exploring AI Infrastructure, AI Agents, and Cloud Native technologies
-- 🌱 Learning and contributing to open-source projects
-- 💻 Interested in building developer tools and AI-powered applications
-
-<h3>🛠️ Tech Stack</h3>
-
-**Languages**
-
-Python · Go · JavaScript · Rust
-
-**AI & Agents**
-
-LangChain · LangGraph · MCP
-
-**Cloud Native & Infrastructure**
-
-Kubernetes · Docker · Prometheus · Git
 
 <h3 align="center">📊 GitHub Statistics</h3>
 

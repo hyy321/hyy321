@@ -3,7 +3,7 @@
 
 ### 🎓 About Me
 
-I'm a student interested in **AI Agents** and **AI Systems**.
+I'm a graduate student at **Nanjing University of Information Science and Technology (NUIST)**, interested in **AI Agents, AI Systems, and AI Infrastructure**.
 
 ### 🚀 Tech Stack
 
@@ -12,7 +12,8 @@ I'm a student interested in **AI Agents** and **AI Systems**.
   ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
   ![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white)
   ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
-
+  ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
+  ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat&logo=openjdk&logoColor=white)
 
 - 🔹 **AI & Agents:**
 
@@ -25,8 +26,6 @@ I'm a student interested in **AI Agents** and **AI Systems**.
   ![RAG](https://img.shields.io/badge/RAG-009688?style=flat)
   ![ReAct](https://img.shields.io/badge/ReAct-E67E22?style=flat)
 
-
-
 - 🔹 **Database:**
 
   ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
@@ -37,9 +36,12 @@ I'm a student interested in **AI Agents** and **AI Systems**.
 
   ![Git](https://img.shields.io/badge/Git-F05032?style=flat&logo=git&logoColor=white)
   ![VS Code](https://img.shields.io/badge/VS_Code-007ACC?style=flat)
+  ![Codex](https://img.shields.io/badge/Codex-000000?style=flat&logo=openai&logoColor=white)
+  ![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=flat&logo=kubernetes&logoColor=white)
+  ![Typora](https://img.shields.io/badge/Typora-525252?style=flat&logo=typora&logoColor=white)
 
-<h3>📊 GitHub Activity</h3>
+### 📊 GitHub Activity
 
 <p align="center">
-  <img src="https://streak-stats.demolab.com?user=hyy321&theme=default&starting_year=2026" alt="GitHub Streak" />
+  <img src="https://streak-stats.demolab.com/?user=hyy321&theme=default&starting_year=2026&v=20261029" alt="GitHub Streak" />
 </p>
